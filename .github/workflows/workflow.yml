@@ -1,17 +1,59 @@
-name: Hello World
+# You'll need to set up these prerequisites:
+
+# 1. Create an IAM role with these permissions:
+#    - `AmazonEC2ContainerRegistryPowerUser`
+#    - Trust relationship with AWS CodeBuild service
+
+# 2. Add these secrets to your GitHub repository:
+#    - `AWS_ROLE_ARN`: The ARN of the IAM role created above
+
+# 3. Update these environment variables in the workflow:
+#    - `AWS_REGION`: Your AWS region where ECR is located
+#    - `ECR_REPOSITORY`: Your ECR repository name
+
+# This workflow:
+# - Uses AWS CodeBuild as a self-hosted runner
+# - Uses OIDC for secure authentication with AWS
+# - Builds your Docker image using the Dockerfile in your repository
+# - Tags the image with the git commit SHA
+# - Pushes the image to Amazon ECR
+name: Build and Push to ECR
 on: [push]
+
+env:
+  AWS_REGION: ap-northeast-1
+  ECR_REPOSITORY: py
+  IMAGE_TAG: ${{ github.sha }}
+
 jobs:
-  Hello-World-Job:
-    runs-on:
-      - codebuild-GitHub-Actions-${{ github.run_id }}-${{ github.run_attempt }}
-      - image:arm-3.0
-      - instance-size:small
-    steps:
-      - run: echo "Hello World!"
-  build:
+  build-and-push:
     runs-on:
       - codebuild-GitHub-Actions-${{ github.run_id }}-${{ github.run_attempt }}
       - image:docker
       - instance-size:small
+
+    permissions:
+      id-token: write # Required for OIDC authentication
+      contents: read
+
     steps:
-      - run: docker version
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker build -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} .
+          docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          echo "::set-output name=image::${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}"
