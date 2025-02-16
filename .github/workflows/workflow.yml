@@ -8,3 +8,10 @@ jobs:
       - instance-size:small
     steps:
       - run: echo "Hello World!"
+  build:
+    runs-on:
+      - codebuild-GitHub-Actions-${{ github.run_id }}-${{ github.run_attempt }}
+      - image:docker
+      - instance-size:small
+    steps:
+      - run: docker version
