@@ -22,13 +22,13 @@ on: [push]
 
 env:
   AWS_REGION: ap-northeast-1
-  ECR_REPOSITORY: py
+  ECR_REPOSITORY: alpine/py
   IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   build-and-push:
     runs-on:
-      - codebuild-GitHub-Actions-${{ github.run_id }}-${{ github.run_attempt }}
+      - codebuild-actions-${{ github.run_id }}-${{ github.run_attempt }}
       - image:docker
       - instance-size:small
 
