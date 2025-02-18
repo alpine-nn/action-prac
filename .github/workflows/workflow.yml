@@ -23,7 +23,8 @@ on: [push]
 env:
   AWS_REGION: ap-northeast-1
   ECR_REPOSITORY: alpine/py
-  IMAGE_TAG: ${{ github.sha }}
+  # IMAGE_TAG: ${{ github.sha }}
+  IMAGE_TAG: latest
 
 jobs:
   build-and-push:
